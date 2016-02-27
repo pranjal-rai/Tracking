@@ -8,6 +8,7 @@
 #include <opencv2/ml/ml.hpp>
 #include "/home/gazzib/vlfeat-0.9.20/vl/svm.h"
 #include "/home/gazzib/vlfeat-0.9.20/vl/hog.h"
+#include "/home/gazzib/Downloads/honours/Tracking/code/tempcodes/hog.h"
 #define F first
 #define S second
 using namespace std;
@@ -111,9 +112,9 @@ int main()
     FastIO();
     string str;
 
-    int dim=4608;
-    int n_pos_samples=10;
-    int n_neg_samples=200;
+    int dim=15*7*36;
+    int n_pos_samples=5;
+    int n_neg_samples=40;
     int n=n_neg_samples+n_pos_samples;
 
     float image[width*height*3];  //width*height
@@ -128,13 +129,22 @@ int main()
     int idx=0,idx1=0,i,j,k,l;
 
     Mat mat;
-
+   /* i=1;
+        str=path_pos_samples+to_string(i)+".jpg";
+        vector<float> des;
+        des=hog_descriptor(str);
+        for(i=0;i<des.size();i++)
+            cout <<des[i]<<" ";
+        cout <<"\n";*/
     for(i=1;i<=n_pos_samples;i++,idx++)
     {
         str=path_pos_samples+to_string(i)+".jpg";
-        mat=imread(str.c_str(),CV_LOAD_IMAGE_COLOR);
-        cvtmat(mat,image);    
-        float *hogArray=compute_descriptor(image);
+        //mat=imread(str.c_str(),CV_LOAD_IMAGE_COLOR);
+        //cvtmat(mat,image);    
+       // float *hogArray=compute_descriptor(image);
+        mat=imread(str.c_str(),CV_LOAD_IMAGE_GRAYSCALE);
+        vector <float> hogArray;
+        hogArray=hog_descriptor(mat);
         for(j=0;j<dim;j++)
         {
             training[idx1]=hogArray[j];
@@ -146,9 +156,12 @@ int main()
     for(i=1;i<=n_neg_samples;i++,idx++)
     {
         str=path_neg_samples+to_string(i)+".jpg";
-        mat=imread(str.c_str(),CV_LOAD_IMAGE_COLOR);
-        cvtmat(mat,image);
-        float *hogArray=compute_descriptor(image);
+        //mat=imread(str.c_str(),CV_LOAD_IMAGE_COLOR);
+        //cvtmat(mat,image);
+        //float *hogArray=compute_descriptor(image);
+        mat=imread(str.c_str(),CV_LOAD_IMAGE_GRAYSCALE);
+        vector <float> hogArray;
+        hogArray=hog_descriptor(mat);
         for(j=0;j<dim;j++)
         {
             training[idx1]=hogArray[j];
@@ -161,21 +174,24 @@ int main()
     //SVM training
     const double *model;
     double bias ;
-    double lambda = 0.01;
+    double lambda = 0.0001;
     VlSvm * svm = vl_svm_new(VlSvmSolverSgd,training,dim,n_pos_samples+n_neg_samples,labels,lambda);
     vl_svm_train(svm);
     model = vl_svm_get_model(svm) ;
     bias = vl_svm_get_bias(svm);
 
 
-/*
+
     cout <<"********Positive Samples********"<<"\n";
     for(i=1;i<=10;i++,idx++)
     {
         str=path_pos_samples+to_string(i)+".jpg";
-        mat=imread(str.c_str(),CV_LOAD_IMAGE_COLOR);
-        cvtmat(mat,image);
-        float *hogArray=compute_descriptor(image);
+        //mat=imread(str.c_str(),CV_LOAD_IMAGE_COLOR);
+        //cvtmat(mat,image);
+        //float *hogArray=compute_descriptor(image);
+        mat=imread(str.c_str(),CV_LOAD_IMAGE_GRAYSCALE);
+        vector <float> hogArray;
+        hogArray=hog_descriptor(mat);
         double ans=0;
         for(j=0;j<dim;j++)
             ans+=hogArray[j]*model[j];
@@ -188,19 +204,22 @@ int main()
     for(i=1;i<=200;i++,idx++)
     {
         str=path_neg_samples+to_string(i)+".jpg";
-        mat=imread(str.c_str(),CV_LOAD_IMAGE_COLOR);
-        cvtmat(mat,image);
-        float *hogArray=compute_descriptor(image);
+        //mat=imread(str.c_str(),CV_LOAD_IMAGE_COLOR);
+        //cvtmat(mat,image);
+        //float *hogArray=compute_descriptor(image);
+        mat=imread(str.c_str(),CV_LOAD_IMAGE_GRAYSCALE);
+        vector <float> hogArray;
+        hogArray=hog_descriptor(mat);
         double ans=0;
         for(j=0;j<dim;j++)
             ans+=hogArray[j]*model[j];
         ans+=bias;
         cout <<ans<<"\n";
     }   
-*/
 
-    //string path="/home/gazzib/Downloads/honours/Tracking/Tracking dataset/dos1_all_frames_jpg/01600.jpg";
-    string path="/home/gazzib/Downloads/honours/Tracking/Tracking dataset/0010.jpg";
+
+    string path="/home/gazzib/Downloads/honours/Tracking/Tracking dataset/dos1_all_frames_jpg/01588.jpg";
+    //string path="/home/gazzib/Downloads/honours/Tracking/Tracking dataset/dos3_all_frames_jpg/00610.jpg";
     mat=imread(path.c_str(),CV_LOAD_IMAGE_COLOR);
     pyrDown(mat,mat);
     pyrDown(mat,mat);
@@ -221,13 +240,20 @@ int main()
             Rect r(j,i,w,h);
             submat=mat(r).clone();
             resize(submat,submat,sz);
-            cvtmat(submat,image);
-            float *hogArray=compute_descriptor(image);
+            //cvtmat(submat,image);
+            vector<float> hogArray;
+            hogArray=hog_descriptor(submat);
             double ans=0;
             for(l=0;l<dim;l++)
                 ans+=hogArray[l]*model[l];
             ans+=bias;
-            if(ans>0.5)
+            if(j==69&&i==67)
+            {
+                cout <<"xxxxxxxxxxxxxxxxxxxxxxxxxx"<<ans<<"xxxxxxxxxxxxxxxxxxxxxxx\n";
+          //      imshow("window2",submat);
+            //    waitKey(0);
+            }
+            if(ans>-2.6)
             {
                vec.clear();
                vec.push_back(j); 
@@ -244,7 +270,6 @@ int main()
     {
         p1.x=v[i][0];
         p1.y=v[i][1];
-        cout <<p1.x<<" "<<p1.y<<"\n";
         p2.x=v[i][2];
         p2.y=v[i][3];
         rectangle(newmat,p1,p2,0);

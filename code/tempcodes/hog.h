@@ -20,10 +20,10 @@ void normalize(vector <float> &vec)
 }
 
 
-vector<float> hog_descriptor(string str)
+vector<float> hog_descriptor(Mat im)
 {
-    Mat im,Ix,Iy,Gdir,Gmag;
-    im=imread(str.c_str(),CV_LOAD_IMAGE_GRAYSCALE);
+    Mat Ix,Iy,Gdir,Gmag;
+//    im=imread(str.c_str(),CV_LOAD_IMAGE_GRAYSCALE);
     int rows=im.rows;
     int cols=im.cols;
     Ix=Mat::zeros(rows,cols,CV_32F);
@@ -38,18 +38,17 @@ vector<float> hog_descriptor(string str)
     {
         for(j=0;j<cols;j++)
         {
-            if(j!=0&&j!=(cols-1))
-            {
-                if(im.at<uchar>(i,j+1)!=im.at<uchar>(i,j-1))
-                    Ix.at<float>(i,j)=im.at<uchar>(i,j+1)-im.at<uchar>(i,j-1);
-                else
-                    Ix.at<float>(i,j)=eps;
-            }
-            if(i!=0&&i!=(rows-1))
-                Iy.at<float>(i,j)=im.at<uchar>(i-1,j)-im.at<uchar>(i+1,j);
-            if(Ix.at<float>(i,j)<eps)
-                Ix.at<float>(i,j)=eps;
-            Gdir.at<float>(i,j)=90+((atan(Iy.at<float>(i,j)/Ix.at<float>(i,j)))*180/M_PI);
+            if(j<cols-2)
+                Ix.at<float>(i,j)=im.at<uchar>(i,j)-im.at<uchar>(i,j+2);
+            else
+                Ix.at<float>(i,j)=im.at<uchar>(i,j);
+            if(i<rows-2)
+                Iy.at<float>(i,j)=im.at<uchar>(i,j)-im.at<uchar>(i+2,j);
+            else
+                Iy.at<float>(i,j)=im.at<uchar>(i,j);
+            Gdir.at<float>(i,j)=90+((atan(Ix.at<float>(i,j)/Iy.at<float>(i,j)))*180/M_PI);
+            if(isnan(Gdir.at<float>(i,j))||Gdir.at<float>(i,j)<0)
+                Gdir.at<float>(i,j)=0;
             Gmag.at<float>(i,j)=sqrt((pow(Iy.at<float>(i,j),2)+pow(Ix.at<float>(i,j),2)));
         }
     }
@@ -58,9 +57,9 @@ vector<float> hog_descriptor(string str)
     int idx1,idx2,len;
     float ang,mag;
     vector <float> bin,block,descriptor;
-    for(i=0;i<rows-cell_size;i=i+cell_size)
+    for(i=0;i<=rows-2*cell_size;i=i+cell_size)
     {
-        for(j=0;j<cols-cell_size;j=j+cell_size)
+        for(j=0;j<=cols-2*cell_size;j=j+cell_size)
         {
             block.clear();
             for(k=0;k<block_size;k++)
