@@ -41,6 +41,7 @@ void cvtmat(Mat &mat,float image[])
     }
 }
 
+//vl-feat hog descriptor
 float *compute_descriptor(float image[])
 {
     VlHog *hog = vl_hog_new(VlHogVariantDalalTriggs, numOrientations, VL_FALSE) ;
@@ -55,7 +56,7 @@ float *compute_descriptor(float image[])
     vl_hog_delete(hog);
     return hogArray;
 }
-
+//non-maximal suppression
 vector<vector<int> > nms(vector<vector<int> > &v,double overlap)
 {
     vector<vector<int> > top;
