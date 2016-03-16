@@ -24,33 +24,27 @@ vl_size numChannels=3;
 vl_size cellSize=8;
 
 
-//VlHog * hog;
 void cvtmat(Mat &mat,float image[])
 {
     int i,j,l=0;
-#pragma omp parallel default(shared)
-    {
-#pragma omp for collapse(2)
-        for (int i = 0; i < mat.rows; ++i) {
-            for (int j = 0; j < mat.cols; ++j) {
-                image[j + mat.cols*i + mat.cols*mat.rows*0] = mat.at<cv::Vec3b>(i, j)[0];
-                image[j + mat.cols*i + mat.cols*mat.rows*1] = mat.at<cv::Vec3b>(i, j)[1];
-                image[j + mat.cols*i + mat.cols*mat.rows*2] = mat.at<cv::Vec3b>(i, j)[2];
-            }
+    for (int i = 0; i < mat.rows; ++i) {
+        for (int j = 0; j < mat.cols; ++j) {
+            image[j + mat.cols*i + mat.cols*mat.rows*0] = mat.at<cv::Vec3b>(i, j)[0];
+            image[j + mat.cols*i + mat.cols*mat.rows*1] = mat.at<cv::Vec3b>(i, j)[1];
+            image[j + mat.cols*i + mat.cols*mat.rows*2] = mat.at<cv::Vec3b>(i, j)[2];
         }
     }
 }
 
 float *compute_descriptor(float image[])
 {
-    VlHog *hog = vl_hog_new(VlHogVariantDalalTriggs, numOrientations, VL_FALSE) ;
+
+    VlHog * hog = vl_hog_new(VlHogVariantDalalTriggs, numOrientations, VL_FALSE) ;
     vl_hog_put_image(hog, image, height, width, numChannels, cellSize) ;
-    /*  vl_size hogWidth = vl_hog_get_width(hog) ;
-        vl_size hogHeight = vl_hog_get_height(hog) ;
-        vl_size hogDimension = vl_hog_get_dimension(hog) ;
-        cout <<hogWidth<<" "<<hogHeight<<" "<<hogDimension<<"\n";
-        float *hogArray = (float*)vl_malloc(hogWidth*hogHeight*hogDimension*sizeof(float)) ;*/
-    float *hogArray = (float*)vl_malloc(18432);
+    vl_size hogWidth = vl_hog_get_width(hog) ;
+    vl_size hogHeight = vl_hog_get_height(hog) ;
+    vl_size hogDimension = vl_hog_get_dimension(hog) ;
+    float *hogArray = (float*)vl_malloc(hogWidth*hogHeight*hogDimension*sizeof(float)) ;
     vl_hog_extract(hog, hogArray);
     vl_hog_delete(hog);
     return hogArray;
@@ -111,7 +105,7 @@ vector<vector<int> > nms(vector<vector<int> > &v,double overlap)
     }
     return top;
 }
-
+        
 
 int main()
 {
@@ -175,38 +169,39 @@ int main()
     bias = vl_svm_get_bias(svm);
 
 
+/*
+    cout <<"********Positive Samples********"<<"\n";
+    for(i=1;i<=10;i++,idx++)
+    {
+        str=path_pos_samples+to_string(i)+".jpg";
+        mat=imread(str.c_str(),CV_LOAD_IMAGE_COLOR);
+        cvtmat(mat,image);
+        float *hogArray=compute_descriptor(image);
+        double ans=0;
+        for(j=0;j<dim;j++)
+            ans+=hogArray[j]*model[j];
+        ans+=bias;
+        cout <<ans<<"\n";
+    }
 
-    /*   cout <<"********Positive Samples********"<<"\n";
-         for(i=1;i<=10;i++,idx++)
-         {
-         str=path_pos_samples+to_string(i)+".jpg";
-         mat=imread(str.c_str(),CV_LOAD_IMAGE_COLOR);
-         cvtmat(mat,image);
-         float *hogArray=compute_descriptor(image);
-         double ans=0;
-         for(j=0;j<dim;j++)
-         ans+=hogArray[j]*model[j];
-         ans+=bias;
-         cout <<ans<<"\n";
-         }
 
+    cout <<"********Negative Samples********"<<"\n";
+    for(i=1;i<=200;i++,idx++)
+    {
+        str=path_neg_samples+to_string(i)+".jpg";
+        mat=imread(str.c_str(),CV_LOAD_IMAGE_COLOR);
+        cvtmat(mat,image);
+        float *hogArray=compute_descriptor(image);
+        double ans=0;
+        for(j=0;j<dim;j++)
+            ans+=hogArray[j]*model[j];
+        ans+=bias;
+        cout <<ans<<"\n";
+    }   
+*/
 
-         cout <<"********Negative Samples********"<<"\n";
-         for(i=1;i<=200;i++,idx++)
-         {
-         str=path_neg_samples+to_string(i)+".jpg";
-         mat=imread(str.c_str(),CV_LOAD_IMAGE_COLOR);
-         cvtmat(mat,image);
-         float *hogArray=compute_descriptor(image);
-         double ans=0;
-         for(j=0;j<dim;j++)
-         ans+=hogArray[j]*model[j];
-         ans+=bias;
-         cout <<ans<<"\n";
-         }   
-     */
-
-    string path="/home/gazzib/Downloads/honours/Tracking/Tracking dataset/dos1_all_frames_jpg/00800.jpg";
+    string path="/home/gazzib/Downloads/honours/Tracking/Tracking dataset/dos1_all_frames_jpg/01600.jpg";
+    //string path="/home/gazzib/Downloads/honours/Tracking/Tracking dataset/0010.jpg";
     mat=imread(path.c_str(),CV_LOAD_IMAGE_COLOR);
     pyrDown(mat,mat);
     pyrDown(mat,mat);
@@ -220,40 +215,47 @@ int main()
     Size sz(64,128);
     vector<int> vec;
     vector<vector<int> > v;
+    //#pragma omp parallel for
     int mxi = r-h;
     int mxj = c-w;
-    double thresh=1.9-bias;
-    //double ans;
-    omp_set_num_threads(4);
-#pragma omp parallel private(submat,vec) firstprivate(dim,bias,model,image,sz) default(shared)
+    //float *hogArray;
+    double ans;
+    //#pragma omp parallel default(shared) private(submat,bias)
+    //printf("%lf\n",bias);
+    //#pragma omp parallel for private(submat,ans,vec) firstprivate(dim,bias,model,image,sz) default(shared) collapse(2)
+    #pragma omp parallel private(submat,ans,vec) firstprivate(dim,bias,model,image,sz) default(shared)
+    for(int i=0;i<mxi;i++)
     {
-#pragma omp for collapse(2)
-        for(int i=0;i<mxi;i++)
+        //#pragma omp parallel for private(submat,bias) ordered
+#pragma omp for
+        for(int j=0;j<mxj;j++)
         {
-            for(int j=0;j<mxj;j++)
+            Rect r(j,i,w,h);
+            submat=mat(r).clone();
+            resize(submat,submat,sz);
+            cvtmat(submat,image);
+            float* hogArray=compute_descriptor(image);
+            ans=0;
+         //   #pragma omp parallel for
+//#pragma omp ordered
+            //printf("%d\n",dim);
+            for(int l=0;l<dim;l++)
             {
-                Rect r(j,i,w,h);
-                submat=mat(r).clone();
-                    resize(submat,submat,sz);
-                cvtmat(submat,image);
-                float* hogArray=compute_descriptor(image);
-                double ans=0;
-#pragma omp parallel for reduction(+:ans)
-                for(int l=0;l<dim;l++)
-                {
-                    ans+=hogArray[l]*model[l];
-                }
-                //ans+=bias;
-                if(ans>thresh)
-                {
-                    vec.clear();
-                    vec.push_back(j); 
-                    vec.push_back(i); 
-                    vec.push_back(j+w); 
-                    vec.push_back(i+h); 
-                    v.push_back(vec);
-                }
+                ans+=hogArray[l]*model[l];
+                //printf("%d %d %d %d\n",i,j,l,omp_get_thread_num());
             }
+            ans+=bias;
+            //printf("%lf %lf %d\n",ans,bias,dim);
+            if(ans>1.9)
+            {
+               vec.clear();
+               vec.push_back(j); 
+               vec.push_back(i); 
+               vec.push_back(j+w); 
+               vec.push_back(i+h); 
+               v.push_back(vec);
+            }
+            printf("%d %d %d\n",i,j,omp_get_thread_num());
         }
     }
     v=nms(v,0.5);
@@ -262,13 +264,13 @@ int main()
     {
         p1.x=v[i][0];
         p1.y=v[i][1];
+        //cout <<p1.x<<" "<<p1.y<<"\n";
         p2.x=v[i][2];
         p2.y=v[i][3];
         rectangle(newmat,p1,p2,0);
     }
-    namedWindow("results",WINDOW_NORMAL);
-      imshow("results",newmat);
-      waitKey(0);
-    //imwrite("/home/gazzib/Downloads/honours/Tracking/code/result.jpg",newmat);
+    namedWindow("window2",WINDOW_NORMAL);
+    imshow("window2",newmat);
+    waitKey(0);
     return 0;
 }

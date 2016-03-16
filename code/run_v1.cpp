@@ -24,7 +24,7 @@ vl_size numChannels=3;
 vl_size cellSize=8;
 
 
-//VlHog * hog;
+VlHog * hog;
 void cvtmat(Mat &mat,float image[])
 {
     int i,j,l=0;
@@ -43,16 +43,15 @@ void cvtmat(Mat &mat,float image[])
 
 float *compute_descriptor(float image[])
 {
-    VlHog *hog = vl_hog_new(VlHogVariantDalalTriggs, numOrientations, VL_FALSE) ;
     vl_hog_put_image(hog, image, height, width, numChannels, cellSize) ;
-    /*  vl_size hogWidth = vl_hog_get_width(hog) ;
-        vl_size hogHeight = vl_hog_get_height(hog) ;
-        vl_size hogDimension = vl_hog_get_dimension(hog) ;
-        cout <<hogWidth<<" "<<hogHeight<<" "<<hogDimension<<"\n";
-        float *hogArray = (float*)vl_malloc(hogWidth*hogHeight*hogDimension*sizeof(float)) ;*/
+/*  vl_size hogWidth = vl_hog_get_width(hog) ;
+    vl_size hogHeight = vl_hog_get_height(hog) ;
+    vl_size hogDimension = vl_hog_get_dimension(hog) ;
+    cout <<hogWidth<<" "<<hogHeight<<" "<<hogDimension<<"\n";
+    float *hogArray = (float*)vl_malloc(hogWidth*hogHeight*hogDimension*sizeof(float)) ;*/
     float *hogArray = (float*)vl_malloc(18432);
     vl_hog_extract(hog, hogArray);
-    vl_hog_delete(hog);
+//    vl_hog_delete(hog);
     return hogArray;
 }
 
@@ -175,38 +174,38 @@ int main()
     bias = vl_svm_get_bias(svm);
 
 
-
+    
     /*   cout <<"********Positive Samples********"<<"\n";
-         for(i=1;i<=10;i++,idx++)
-         {
-         str=path_pos_samples+to_string(i)+".jpg";
-         mat=imread(str.c_str(),CV_LOAD_IMAGE_COLOR);
-         cvtmat(mat,image);
-         float *hogArray=compute_descriptor(image);
-         double ans=0;
-         for(j=0;j<dim;j++)
-         ans+=hogArray[j]*model[j];
-         ans+=bias;
-         cout <<ans<<"\n";
-         }
+       for(i=1;i<=10;i++,idx++)
+       {
+       str=path_pos_samples+to_string(i)+".jpg";
+       mat=imread(str.c_str(),CV_LOAD_IMAGE_COLOR);
+       cvtmat(mat,image);
+       float *hogArray=compute_descriptor(image);
+       double ans=0;
+       for(j=0;j<dim;j++)
+       ans+=hogArray[j]*model[j];
+       ans+=bias;
+       cout <<ans<<"\n";
+       }
 
 
-         cout <<"********Negative Samples********"<<"\n";
-         for(i=1;i<=200;i++,idx++)
-         {
-         str=path_neg_samples+to_string(i)+".jpg";
-         mat=imread(str.c_str(),CV_LOAD_IMAGE_COLOR);
-         cvtmat(mat,image);
-         float *hogArray=compute_descriptor(image);
-         double ans=0;
-         for(j=0;j<dim;j++)
-         ans+=hogArray[j]*model[j];
-         ans+=bias;
-         cout <<ans<<"\n";
-         }   
+       cout <<"********Negative Samples********"<<"\n";
+       for(i=1;i<=200;i++,idx++)
+       {
+       str=path_neg_samples+to_string(i)+".jpg";
+       mat=imread(str.c_str(),CV_LOAD_IMAGE_COLOR);
+       cvtmat(mat,image);
+       float *hogArray=compute_descriptor(image);
+       double ans=0;
+       for(j=0;j<dim;j++)
+       ans+=hogArray[j]*model[j];
+       ans+=bias;
+       cout <<ans<<"\n";
+       }   
      */
 
-    string path="/home/gazzib/Downloads/honours/Tracking/Tracking dataset/dos1_all_frames_jpg/00800.jpg";
+    string path="/home/gazzib/Downloads/honours/Tracking/Tracking dataset/dos1_all_frames_jpg/00948.jpg";
     mat=imread(path.c_str(),CV_LOAD_IMAGE_COLOR);
     pyrDown(mat,mat);
     pyrDown(mat,mat);
@@ -222,8 +221,8 @@ int main()
     vector<vector<int> > v;
     int mxi = r-h;
     int mxj = c-w;
-    double thresh=1.9-bias;
     //double ans;
+    hog = vl_hog_new(VlHogVariantDalalTriggs, numOrientations, VL_FALSE) ;
     omp_set_num_threads(4);
 #pragma omp parallel private(submat,vec) firstprivate(dim,bias,model,image,sz) default(shared)
     {
@@ -234,7 +233,7 @@ int main()
             {
                 Rect r(j,i,w,h);
                 submat=mat(r).clone();
-                    resize(submat,submat,sz);
+                resize(submat,submat,sz);
                 cvtmat(submat,image);
                 float* hogArray=compute_descriptor(image);
                 double ans=0;
@@ -243,8 +242,8 @@ int main()
                 {
                     ans+=hogArray[l]*model[l];
                 }
-                //ans+=bias;
-                if(ans>thresh)
+                ans+=bias;
+                if(ans>1.9)
                 {
                     vec.clear();
                     vec.push_back(j); 
@@ -266,9 +265,8 @@ int main()
         p2.y=v[i][3];
         rectangle(newmat,p1,p2,0);
     }
-    namedWindow("results",WINDOW_NORMAL);
-      imshow("results",newmat);
-      waitKey(0);
-    //imwrite("/home/gazzib/Downloads/honours/Tracking/code/result.jpg",newmat);
+    //namedWindow("results",WINDOW_NORMAL);
+    //imshow("results",newmat);
+    //waitKey(0);
     return 0;
 }
